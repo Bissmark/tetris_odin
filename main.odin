@@ -3,6 +3,7 @@ package main
 import "core:fmt"
 import "core:log"
 import SDL "vendor:sdl3"
+import "core:math/rand"
 
 Vec2 :: [2]f32
 
@@ -67,10 +68,6 @@ Game :: struct {
     next_piece: [4][4]int,
 }
 
-// Game_Area :: struct {
-//     cell: bool
-// }
-
 SCREEN_WIDTH :: 720
 SCREEN_HEIGHT :: 560
 
@@ -94,7 +91,7 @@ initialize :: proc(game: ^Game) -> bool {
     game.play_area.x = SCREEN_WIDTH / 2 - game.play_area.w / 2
     game.play_area.y = 0
 
-    game.next_piece = PIECE_S
+    get_random_piece(game)
 
     game.next_piece_box.w = 100
     game.next_piece_box.h = 100
@@ -103,16 +100,6 @@ initialize :: proc(game: ^Game) -> bool {
 
     return true
 }
-
-update :: proc() {
-
-}
-
-// render_game_area :: proc(game: ^Game) {
-//     SDL.SetRenderDrawColor(game.renderer, 30, 30, 30, 255)
-//     SDL.RenderFillRect(game.renderer, &game.play_area)
-// }
-
 render_board :: proc(game: ^Game) {
     cell_w := game.play_area.w / 10
     cell_h := game.play_area.h / 20
@@ -152,6 +139,25 @@ render_next_piece :: proc(game: ^Game) {
     }
 }
 
+get_random_piece :: proc(game: ^Game){
+    switch rand.int_max(7) {
+        case 0:
+            game.next_piece = PIECE_O
+        case 1:
+            game.next_piece = PIECE_I
+        case 2:
+            game.next_piece = PIECE_J
+        case 3:
+            game.next_piece = PIECE_L
+        case 4:
+            game.next_piece = PIECE_S
+        case 5:
+            game.next_piece = PIECE_T
+        case 6:
+            game.next_piece = PIECE_Z
+    }
+}
+
 main_loop :: proc(game: ^Game) {
     for {
         for SDL.PollEvent(&game.event) {
@@ -161,12 +167,9 @@ main_loop :: proc(game: ^Game) {
             }
         }
 
-        // update()
-
         SDL.SetRenderDrawColor(game.renderer, 0, 0, 0, 255)
         SDL.RenderClear(game.renderer)
 
-        //render_game_area(game)
         render_board(game)
         render_next_piece(game)
 
