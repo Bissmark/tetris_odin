@@ -1,7 +1,8 @@
 - I need to add the next piece at the top of the play area - done
 - After a second it needs to start falling in the play area - done
-- Then let the player be able to rotate the piece with the up arrow key
+- Then let the player be able to rotate the piece with the up arrow key - done
 - also let them move the piece left and right (will do the faster speed down later on) - done
+- New to confine the pieces as they are falling in the play area
 - When the piece hits the bottom allow a tiny amount of time for moving before the piece gets locked
 - After piece is locked the next piece will appear at the time of the play area again
 - Figure out collision between blocks on the play area when they get locked

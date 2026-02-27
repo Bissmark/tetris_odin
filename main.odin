@@ -117,7 +117,9 @@ update :: proc(game: ^Game) {
     now := SDL.GetTicks()
     if now - game.last_tick >= 1000 {
         game.last_tick = now
-        game.active_piece.row += 1
+        if game.active_piece.row < 20 {
+            game.active_piece.row += 1
+        }
         if game.active_piece.row == 20 {
             game.active_piece.locked = true
         }
@@ -224,16 +226,22 @@ main_loop :: proc(game: ^Game) {
                     return
                 case .KEY_DOWN:
                     if game.event.key.scancode == .LEFT {
-                        game.active_piece.col -= 1
+                        if game.active_piece.col >= 0 {
+                            game.active_piece.col -= 1
+                        }
                     }
                     if game.event.key.scancode == .RIGHT {
-                        game.active_piece.col += 1
+                        if game.active_piece.col + 4 <= 10 {
+                            game.active_piece.col += 1
+                        }
                     }
                     if game.event.key.scancode == .DOWN {
-                        game.active_piece.row += 1
+                        if game.active_piece.row < 20 {
+                            // game.active_piece.locked = true
+                            game.active_piece.row += 1
+                        }
                     }
                     if game.event.key.scancode == .UP {
-                        // Rotate piece
                         rotate_piece(game)
                     }
             }
