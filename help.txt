@@ -1,0 +1,11 @@
+- I need to add the next piece at the top of the play area
+- After a second it needs to start falling in the play area
+- Then let the player be able to rotate the piece with the up arrow key
+- also let them move the piece left and right (will do the faster speed down later on)
+- When the piece hits the bottom allow a tiny amount of time for moving before the piece gets locked
+- After piece is locked the next piece will appear at the time of the play area again
+- Figure out collision between blocks on the play area when they get locked
+- Do the row deletion if all the row is full with blocks
+- add timer to speed up game after certain amount of pieces are removed
+- add score
+- allow player to start at harder (faster) difficulty

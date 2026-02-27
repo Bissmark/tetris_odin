@@ -8,16 +8,16 @@ import "core:math/rand"
 Vec2 :: [2]f32
 
 PIECE_O :: [4][4]int {
+    {0, 1, 1, 0},
+    {0, 1, 1, 0},
     {0, 0, 0, 0},
-    {0, 1, 1, 0},
-    {0, 1, 1, 0},
     {0, 0, 0, 0},
 }
 
 PIECE_I :: [4][4]int {
-    {0, 0, 0, 0},
-    {0, 0, 0, 0},
     {1, 1, 1, 1},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
     {0, 0, 0, 0},
 }
 
@@ -36,23 +36,23 @@ PIECE_L :: [4][4]int {
 }
 
 PIECE_Z :: [4][4]int {
-    {0, 0, 0, 0},
-    {1, 1, 0, 0},
     {0, 1, 1, 0},
+    {0, 0, 1, 1},
+    {0, 0, 0, 0},
     {0, 0, 0, 0},
 }
 
 PIECE_T :: [4][4]int {
+    {0, 0, 1, 0},
+    {0, 1, 1, 1},
     {0, 0, 0, 0},
-    {0, 1, 0, 0},
-    {1, 1, 1, 0},
     {0, 0, 0, 0},
 }
 
 PIECE_S :: [4][4]int {
-    {0, 0, 0, 0},
+    {0, 0, 1, 1},
     {0, 1, 1, 0},
-    {1, 1, 0, 0},
+    {0, 0, 0, 0},
     {0, 0, 0, 0},
 }
 
@@ -65,7 +65,14 @@ Game :: struct {
     next_piece_box: SDL.FRect,
 
     board: [20][10]int,
-    next_piece: [4][4]int,
+    next_piece: Piece,
+    active_piece: Piece,
+}
+
+Piece :: struct {
+    shape: [4][4]int,
+    row: int,
+    col: int,
 }
 
 SCREEN_WIDTH :: 720
@@ -91,7 +98,8 @@ initialize :: proc(game: ^Game) -> bool {
     game.play_area.x = SCREEN_WIDTH / 2 - game.play_area.w / 2
     game.play_area.y = 0
 
-    get_random_piece(game)
+    spawn_next_block(game)
+    spawn_next_block(game)
 
     game.next_piece_box.w = 100
     game.next_piece_box.h = 100
@@ -118,13 +126,13 @@ render_board :: proc(game: ^Game) {
     }
 }
 
-render_next_piece :: proc(game: ^Game) {
+render_next_block :: proc(game: ^Game) {
     cell_w := game.next_piece_box.w / 4
     cell_h := game.next_piece_box.h / 4
 
     for row in 0..<4 {
         for col in 0..<4 {
-            if game.next_piece[row][col] == 1 {
+            if game.next_piece.shape[row][col] == 1 {
                 rect := SDL.FRect{
                     x = game.next_piece_box.x + f32(col) * cell_w,
                     y = game.next_piece_box.y + f32(row) * cell_h,
@@ -139,22 +147,46 @@ render_next_piece :: proc(game: ^Game) {
     }
 }
 
-get_random_piece :: proc(game: ^Game){
+render_block_in_play_area :: proc(game: ^Game) {
+    cell_w := game.play_area.w / 10
+    cell_h := game.play_area.h / 20
+
+    for row in 0..<4 {
+        for col in 0..<4 {
+            if game.active_piece.shape[row][col] == 1 {
+                rect := SDL.FRect {
+                    x = game.play_area.x + f32(game.active_piece.col + col) * cell_w,
+                    y = game.play_area.y + f32(game.active_piece.row + row) * cell_h,
+                    w = cell_w,
+                    h = cell_h,
+                }
+                SDL.SetRenderDrawColor(game.renderer, 255, 255, 255, 255)
+                SDL.RenderFillRect(game.renderer, &rect)
+            }
+        }
+    }
+}
+
+spawn_next_block :: proc(game: ^Game){
+    game.active_piece = game.next_piece
+    game.active_piece.col = 3
+    game.active_piece.row = 0
+
     switch rand.int_max(7) {
         case 0:
-            game.next_piece = PIECE_O
+            game.next_piece.shape = PIECE_O
         case 1:
-            game.next_piece = PIECE_I
+            game.next_piece.shape = PIECE_I
         case 2:
-            game.next_piece = PIECE_J
+            game.next_piece.shape = PIECE_J
         case 3:
-            game.next_piece = PIECE_L
+            game.next_piece.shape = PIECE_L
         case 4:
-            game.next_piece = PIECE_S
+            game.next_piece.shape = PIECE_S
         case 5:
-            game.next_piece = PIECE_T
+            game.next_piece.shape = PIECE_T
         case 6:
-            game.next_piece = PIECE_Z
+            game.next_piece.shape = PIECE_Z
     }
 }
 
@@ -171,7 +203,8 @@ main_loop :: proc(game: ^Game) {
         SDL.RenderClear(game.renderer)
 
         render_board(game)
-        render_next_piece(game)
+        render_next_block(game)
+        render_block_in_play_area(game)
 
         SDL.RenderPresent(game.renderer)
     }
