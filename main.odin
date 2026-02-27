@@ -206,6 +206,16 @@ spawn_next_block :: proc(game: ^Game){
     }
 }
 
+rotate_piece :: proc(game: ^Game) {
+    new_shape: [4][4]int
+    for col in 0..<4 {
+        for row in 0..<4 {
+            new_shape[col][3 - row] = game.active_piece.shape[row][col]
+        }
+    }
+    game.active_piece.shape = new_shape
+}
+
 main_loop :: proc(game: ^Game) {
     for {
         for SDL.PollEvent(&game.event) {
@@ -224,6 +234,7 @@ main_loop :: proc(game: ^Game) {
                     }
                     if game.event.key.scancode == .UP {
                         // Rotate piece
+                        rotate_piece(game)
                     }
             }
         }
