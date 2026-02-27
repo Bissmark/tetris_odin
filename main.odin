@@ -67,12 +67,16 @@ Game :: struct {
     board: [20][10]int,
     next_piece: Piece,
     active_piece: Piece,
+
+    last_tick: u64,
 }
 
 Piece :: struct {
     shape: [4][4]int,
     row: int,
     col: int,
+    speed: int,
+    locked: bool
 }
 
 SCREEN_WIDTH :: 720
@@ -108,6 +112,18 @@ initialize :: proc(game: ^Game) -> bool {
 
     return true
 }
+
+update :: proc(game: ^Game) {
+    now := SDL.GetTicks()
+    if now - game.last_tick >= 1000 {
+        game.last_tick = now
+        game.active_piece.row += 1
+        if game.active_piece.row == 20 {
+            game.active_piece.locked = true
+        }
+    }
+}
+
 render_board :: proc(game: ^Game) {
     cell_w := game.play_area.w / 10
     cell_h := game.play_area.h / 20
@@ -196,6 +212,19 @@ main_loop :: proc(game: ^Game) {
             #partial switch game.event.type {
                 case .QUIT:
                     return
+                case .KEY_DOWN:
+                    if game.event.key.scancode == .LEFT {
+                        game.active_piece.col -= 1
+                    }
+                    if game.event.key.scancode == .RIGHT {
+                        game.active_piece.col += 1
+                    }
+                    if game.event.key.scancode == .DOWN {
+                        game.active_piece.row += 1
+                    }
+                    if game.event.key.scancode == .UP {
+                        // Rotate piece
+                    }
             }
         }
 
@@ -205,8 +234,10 @@ main_loop :: proc(game: ^Game) {
         render_board(game)
         render_next_block(game)
         render_block_in_play_area(game)
+        update(game)
 
         SDL.RenderPresent(game.renderer)
+        SDL.Delay(16) // 60 fps cap
     }
 }
 
