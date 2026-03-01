@@ -86,6 +86,7 @@ Game :: struct {
     difficulty: int,
     lines_cleared: int,
     drop_interval: u64,
+    last_timer_tick: u64,
 }
 
 Piece :: struct {
@@ -135,7 +136,7 @@ initialize :: proc(game: ^Game) -> bool {
     game.next_piece_box.x = game.play_area.x + 325
     game.next_piece_box.y = 0
 
-    game.difficulty = 1
+    game.difficulty = 10
     game.drop_interval = u64(max(100, 1000 - (game.difficulty - 1) * 100))
 
     return true
@@ -145,12 +146,6 @@ update :: proc(game: ^Game) {
     now := SDL.GetTicks()
     if now - game.last_tick >= game.drop_interval {
         game.last_tick = now
-        game.seconds += 1
-        if game.seconds >= 60 {
-            game.seconds = 0
-            game.minutes += 1
-        }
-        timer(game)
         score(game)
         difficulty(game)
         if is_valid_position(game, game.active_piece.shape, game.active_piece.row + 1, game.active_piece.col) {
@@ -427,6 +422,16 @@ main_loop :: proc(game: ^Game) {
         render_board(game)
         render_next_block(game)
         render_block_in_play_area(game)
+        now := SDL.GetTicks()
+        if now - game.last_timer_tick >= 1000 {
+            game.last_timer_tick = now
+            game.seconds += 1
+            if game.seconds >= 60 {
+                game.seconds = 0
+                game.minutes += 1
+            }
+            timer(game)
+        }
         update(game)
 
         dst_timer := SDL.FRect{
