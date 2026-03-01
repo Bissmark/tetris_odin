@@ -68,6 +68,8 @@ Game :: struct {
     next_piece_box: SDL.FRect,
     timer_rect: SDL.Rect,
     timer_image: ^SDL.Texture,
+    score_rect: SDL.Rect,
+    score_image: ^SDL.Texture,
 
     board: [20][10]int,
     next_piece: Piece,
@@ -141,6 +143,7 @@ update :: proc(game: ^Game) {
             game.minutes += 1
         }
         timer(game)
+        score(game)
         if is_valid_position(game, game.active_piece.shape, game.active_piece.row + 1, game.active_piece.col) {
             game.active_piece.row += 1
         } else {
@@ -311,9 +314,25 @@ timer :: proc(game: ^Game) -> bool {
     return true
 }
 
-// score :: proc(game: ^Game) -> bool {
+score :: proc(game: ^Game) -> bool {
+    score_text := fmt.ctprint(game.score)
 
-// }
+    font_surf := TTF.RenderText_Blended(game.font, score_text, 0, FONT_COLOR)
+    if font_surf == nil {
+        log.error("Failed to render text:", SDL.GetError())
+        return false
+    }
+
+    game.score_rect.w = font_surf.w
+    game.score_rect.h = font_surf.h
+    game.score_rect.x = i32(game.play_area.x) - font_surf.w - 10
+    game.score_rect.y = 60
+
+    game.score_image = SDL.CreateTextureFromSurface(game.renderer, font_surf)
+    SDL.DestroySurface(font_surf)
+
+    return true
+}
 
 clear_lines :: proc(game: ^Game) {
     for row in 0..<20 {
@@ -380,6 +399,15 @@ main_loop :: proc(game: ^Game) {
         }
 
         SDL.RenderTexture(game.renderer, game.timer_image, nil, &dst_timer)
+
+        dst_score := SDL.FRect{
+            x = f32(game.score_rect.x),
+            y = f32(game.score_rect.y),
+            w = f32(game.score_rect.w),
+            h = f32(game.score_rect.h),
+        }
+
+        SDL.RenderTexture(game.renderer, game.score_image, nil, &dst_score)
 
         SDL.RenderPresent(game.renderer)
         SDL.Delay(16) // 60 fps cap
