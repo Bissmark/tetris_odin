@@ -256,14 +256,13 @@ rotate_piece :: proc(game: ^Game) {
         }
     }
     
-    if is_valid_position(game, new_shape, game.active_piece.row, game.active_piece.col) {
-        game.active_piece.shape = new_shape
-    } else if is_valid_position(game, new_shape, game.active_piece.row, game.active_piece.col + 1) {
-        game.active_piece.shape = new_shape
-        game.active_piece.col += 1
-    } else if is_valid_position(game, new_shape, game.active_piece.row, game.active_piece.col - 1) {
-        game.active_piece.shape = new_shape
-        game.active_piece.col -= 1
+    kicks := []int{0, 1, -1, 2, -2}
+    for kick in kicks {
+        if is_valid_position(game, new_shape, game.active_piece.row, game.active_piece.col + kick) {
+            game.active_piece.shape = new_shape
+            game.active_piece.col += kick
+            break
+        }
     }
 }
 
