@@ -3,9 +3,12 @@ package main
 import "core:fmt"
 import "core:log"
 import SDL "vendor:sdl3"
+import TTF "vendor:sdl3/ttf"
 import "core:math/rand"
 
 Vec2 :: [2]f32
+FONT_SIZE :: 40
+FONT_COLOR :: SDL.Color{255, 255, 255, 225}
 
 PIECE_O :: [4][4]int {
     {0, 1, 1, 0},
@@ -63,12 +66,18 @@ Game :: struct {
 
     play_area: SDL.FRect,
     next_piece_box: SDL.FRect,
+    timer_rect: SDL.Rect,
+    timer_image: ^SDL.Texture,
 
     board: [20][10]int,
     next_piece: Piece,
     active_piece: Piece,
 
     last_tick: u64,
+    seconds: int,
+    minutes: int,
+
+    font: ^TTF.Font,
 }
 
 Piece :: struct {
@@ -83,6 +92,8 @@ SCREEN_WIDTH :: 720
 SCREEN_HEIGHT :: 560
 
 initialize :: proc(game: ^Game) -> bool {
+    TTF.Init()
+
     game.window = SDL.CreateWindow("Tetris", SCREEN_WIDTH, SCREEN_HEIGHT, {})
     if game.window == nil {
         log.error("Failed to create window:", SDL.GetError())
@@ -92,6 +103,12 @@ initialize :: proc(game: ^Game) -> bool {
     game.renderer = SDL.CreateRenderer(game.window, nil)
     if game.renderer == nil {
         log.error("Failed to create renderer:", SDL.GetError())
+        return false
+    }
+
+    game.font = TTF.OpenFont("fonts/ShareTechMono-Regular.ttf", FONT_SIZE)
+    if game.font == nil {
+        log.error("Failed to load font:", SDL.GetError())
         return false
     }
 
@@ -117,6 +134,12 @@ update :: proc(game: ^Game) {
     now := SDL.GetTicks()
     if now - game.last_tick >= 1000 {
         game.last_tick = now
+        game.seconds += 1
+        if game.seconds >= 60 {
+            game.seconds = 0
+            game.minutes += 1
+        }
+        timer(game)
         if is_valid_position(game, game.active_piece.shape, game.active_piece.row + 1, game.active_piece.col) {
             game.active_piece.row += 1
         } else {
@@ -266,6 +289,26 @@ rotate_piece :: proc(game: ^Game) {
     }
 }
 
+timer :: proc(game: ^Game) -> bool {
+    timer_text := fmt.ctprintf("%02d:%02d", game.minutes, game.seconds)
+
+    font_surf := TTF.RenderText_Blended(game.font, timer_text, 0, FONT_COLOR)
+    if font_surf == nil {
+        log.error("Failed to render text:", SDL.GetError())
+        return false
+    }
+
+    game.timer_rect.w = font_surf.w
+    game.timer_rect.h = font_surf.h
+    game.timer_rect.x = i32(game.play_area.x) - font_surf.w - 10
+    game.timer_rect.y = 10
+
+    game.timer_image = SDL.CreateTextureFromSurface(game.renderer, font_surf)
+    SDL.DestroySurface(font_surf)
+
+    return true
+}
+
 main_loop :: proc(game: ^Game) {
     for {
         for SDL.PollEvent(&game.event) {
@@ -302,6 +345,15 @@ main_loop :: proc(game: ^Game) {
         render_block_in_play_area(game)
         update(game)
 
+        dst_timer := SDL.FRect{
+            x = f32(game.timer_rect.x),
+            y = f32(game.timer_rect.y),
+            w = f32(game.timer_rect.w),
+            h = f32(game.timer_rect.h),
+        }
+
+        SDL.RenderTexture(game.renderer, game.timer_image, nil, &dst_timer)
+
         SDL.RenderPresent(game.renderer)
         SDL.Delay(16) // 60 fps cap
     }
@@ -313,8 +365,10 @@ main :: proc() {
     game: Game
 
     if !initialize(&game) do return
+    if !timer(&game) do return
     main_loop(&game)
 
+    TTF.CloseFont(game.font)
     SDL.DestroyWindow(game.window)
     SDL.DestroyRenderer(game.renderer)
     SDL.Quit()
