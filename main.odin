@@ -78,6 +78,7 @@ Game :: struct {
     minutes: int,
 
     font: ^TTF.Font,
+    score: int,
 }
 
 Piece :: struct {
@@ -148,8 +149,9 @@ update :: proc(game: ^Game) {
 
         if game.active_piece.locked == true {
             lock_piece(game)
+            clear_lines(game)
             spawn_next_block(game)
-        } 
+        }
     }
 }
 
@@ -307,6 +309,31 @@ timer :: proc(game: ^Game) -> bool {
     SDL.DestroySurface(font_surf)
 
     return true
+}
+
+// score :: proc(game: ^Game) -> bool {
+
+// }
+
+clear_lines :: proc(game: ^Game) {
+    for row in 0..<20 {
+        full := true
+        for col in 0..<10 {
+            if game.board[row][col] == 0 {
+                full = false
+                break
+            }
+        }
+        if full {
+            // shift everything above this row down by one
+            for r := row; r > 0; r -= 1 {
+                game.board[r] = game.board[r - 1]
+            }
+            // clear the top row
+            game.board[0] = {}
+            game.score += 100
+        }
+    }
 }
 
 main_loop :: proc(game: ^Game) {
