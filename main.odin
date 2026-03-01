@@ -70,6 +70,8 @@ Game :: struct {
     timer_image: ^SDL.Texture,
     score_rect: SDL.Rect,
     score_image: ^SDL.Texture,
+    difficulty_rect: SDL.Rect,
+    difficulty_image: ^SDL.Texture,
 
     board: [20][10]int,
     next_piece: Piece,
@@ -81,6 +83,9 @@ Game :: struct {
 
     font: ^TTF.Font,
     score: int,
+    difficulty: int,
+    lines_cleared: int,
+    drop_interval: u64,
 }
 
 Piece :: struct {
@@ -130,12 +135,15 @@ initialize :: proc(game: ^Game) -> bool {
     game.next_piece_box.x = game.play_area.x + 325
     game.next_piece_box.y = 0
 
+    game.difficulty = 1
+    game.drop_interval = u64(max(100, 1000 - (game.difficulty - 1) * 100))
+
     return true
 }
 
 update :: proc(game: ^Game) {
     now := SDL.GetTicks()
-    if now - game.last_tick >= 1000 {
+    if now - game.last_tick >= game.drop_interval {
         game.last_tick = now
         game.seconds += 1
         if game.seconds >= 60 {
@@ -144,6 +152,7 @@ update :: proc(game: ^Game) {
         }
         timer(game)
         score(game)
+        difficulty(game)
         if is_valid_position(game, game.active_piece.shape, game.active_piece.row + 1, game.active_piece.col) {
             game.active_piece.row += 1
         } else {
@@ -315,7 +324,7 @@ timer :: proc(game: ^Game) -> bool {
 }
 
 score :: proc(game: ^Game) -> bool {
-    score_text := fmt.ctprint(game.score)
+    score_text := fmt.ctprint("Score: ", game.score)
 
     font_surf := TTF.RenderText_Blended(game.font, score_text, 0, FONT_COLOR)
     if font_surf == nil {
@@ -329,6 +338,26 @@ score :: proc(game: ^Game) -> bool {
     game.score_rect.y = 60
 
     game.score_image = SDL.CreateTextureFromSurface(game.renderer, font_surf)
+    SDL.DestroySurface(font_surf)
+
+    return true
+}
+
+difficulty :: proc(game: ^Game) -> bool {
+    difficulty_text := fmt.ctprint("Level: ", game.difficulty)
+
+    font_surf := TTF.RenderText_Blended(game.font, difficulty_text, 0, FONT_COLOR)
+    if font_surf == nil {
+        log.error("Failed to render text:", SDL.GetError())
+        return false
+    }
+
+    game.difficulty_rect.w = font_surf.w
+    game.difficulty_rect.h = font_surf.h
+    game.difficulty_rect.x = i32(game.play_area.x) - font_surf.w - 10
+    game.difficulty_rect.y = 110
+
+    game.difficulty_image = SDL.CreateTextureFromSurface(game.renderer, font_surf)
     SDL.DestroySurface(font_surf)
 
     return true
@@ -348,9 +377,18 @@ clear_lines :: proc(game: ^Game) {
             for r := row; r > 0; r -= 1 {
                 game.board[r] = game.board[r - 1]
             }
-            // clear the top row
+            // clear the row
             game.board[0] = {}
             game.score += 100
+            game.lines_cleared += 1
+
+            if game.lines_cleared % 10 == 0 && game.lines_cleared > 0 {
+                game.difficulty += 1
+                game.drop_interval -= 100
+                if game.drop_interval < 100 {
+                    game.drop_interval = 100
+                }
+            }
         }
     }
 }
@@ -409,6 +447,15 @@ main_loop :: proc(game: ^Game) {
 
         SDL.RenderTexture(game.renderer, game.score_image, nil, &dst_score)
 
+        dst_difficulty := SDL.FRect{
+            x = f32(game.difficulty_rect.x),
+            y = f32(game.difficulty_rect.y),
+            w = f32(game.difficulty_rect.w),
+            h = f32(game.difficulty_rect.h),
+        }
+
+        SDL.RenderTexture(game.renderer, game.difficulty_image, nil, &dst_difficulty)
+
         SDL.RenderPresent(game.renderer)
         SDL.Delay(16) // 60 fps cap
     }
@@ -421,6 +468,8 @@ main :: proc() {
 
     if !initialize(&game) do return
     if !timer(&game) do return
+    if !score(&game) do return
+    if !difficulty(&game) do return
     main_loop(&game)
 
     TTF.CloseFont(game.font)

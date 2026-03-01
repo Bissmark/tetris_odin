@@ -9,5 +9,5 @@
 - Look into fixing the rotation of pieces when they are next to walls - done
 - Do the row deletion if all the row is full with blocks - done
 - add timer to speed up game after certain amount of pieces are removed
-- add score
+- add score - done
 - allow player to start at harder (faster) difficulty
