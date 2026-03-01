@@ -117,12 +117,16 @@ update :: proc(game: ^Game) {
     now := SDL.GetTicks()
     if now - game.last_tick >= 1000 {
         game.last_tick = now
-        if game.active_piece.row < 20 {
+        if is_valid_position(game, game.active_piece.shape, game.active_piece.row + 1, game.active_piece.col) {
             game.active_piece.row += 1
-        }
-        if game.active_piece.row == 20 {
+        } else {
             game.active_piece.locked = true
         }
+
+        if game.active_piece.locked == true {
+            lock_piece(game)
+            spawn_next_block(game)
+        } 
     }
 }
 
@@ -138,7 +142,11 @@ render_board :: proc(game: ^Game) {
                 w = cell_w,
                 h = cell_h,
             }
-            SDL.SetRenderDrawColor(game.renderer, 50, 100, 50, 255)
+            if game.board[row][col] == 1 {
+                SDL.SetRenderDrawColor(game.renderer, 255, 255, 255, 255)
+            } else {
+                SDL.SetRenderDrawColor(game.renderer, 50, 100, 50, 255)
+            }
             SDL.RenderFillRect(game.renderer, &rect)
         }
     }
@@ -185,6 +193,20 @@ render_block_in_play_area :: proc(game: ^Game) {
     }
 }
 
+lock_piece :: proc(game: ^Game) {
+    for row in 0..<4 {
+        for col in 0..<4 {
+            if game.active_piece.shape[row][col] == 1 {
+                board_row := game.active_piece.row + row
+                board_col := game.active_piece.col + col
+                if board_row >= 0 && board_row < 20 && board_col >= 0 && board_col < 10 {
+                    game.board[board_row][board_col] = 1
+                }
+            }
+        }
+    }
+}
+
 spawn_next_block :: proc(game: ^Game){
     game.active_piece = game.next_piece
     game.active_piece.col = 3
@@ -208,6 +230,24 @@ spawn_next_block :: proc(game: ^Game){
     }
 }
 
+is_valid_position :: proc(game: ^Game, shape: [4][4]int, row: int, col: int) -> bool {
+    for r in 0..<4 {
+        for c in 0..<4 {
+            if shape[r][c] == 1 {
+                new_row := row + r
+                new_col := col + c
+                if new_row < 0 || new_row >= 20 || new_col < 0 || new_col >= 10 {
+                    return false
+                }
+                if game.board[new_row][new_col] == 1 {
+                    return false
+                }
+            }
+        }
+    }
+    return true
+}
+
 rotate_piece :: proc(game: ^Game) {
     new_shape: [4][4]int
     for col in 0..<4 {
@@ -215,7 +255,16 @@ rotate_piece :: proc(game: ^Game) {
             new_shape[col][3 - row] = game.active_piece.shape[row][col]
         }
     }
-    game.active_piece.shape = new_shape
+    
+    if is_valid_position(game, new_shape, game.active_piece.row, game.active_piece.col) {
+        game.active_piece.shape = new_shape
+    } else if is_valid_position(game, new_shape, game.active_piece.row, game.active_piece.col + 1) {
+        game.active_piece.shape = new_shape
+        game.active_piece.col += 1
+    } else if is_valid_position(game, new_shape, game.active_piece.row, game.active_piece.col - 1) {
+        game.active_piece.shape = new_shape
+        game.active_piece.col -= 1
+    }
 }
 
 main_loop :: proc(game: ^Game) {
@@ -226,18 +275,17 @@ main_loop :: proc(game: ^Game) {
                     return
                 case .KEY_DOWN:
                     if game.event.key.scancode == .LEFT {
-                        if game.active_piece.col >= 0 {
+                        if is_valid_position(game, game.active_piece.shape, game.active_piece.row, game.active_piece.col - 1) {
                             game.active_piece.col -= 1
                         }
                     }
                     if game.event.key.scancode == .RIGHT {
-                        if game.active_piece.col + 4 <= 10 {
+                        if is_valid_position(game, game.active_piece.shape, game.active_piece.row, game.active_piece.col + 1) {
                             game.active_piece.col += 1
                         }
                     }
                     if game.event.key.scancode == .DOWN {
-                        if game.active_piece.row < 20 {
-                            // game.active_piece.locked = true
+                        if is_valid_position(game, game.active_piece.shape, game.active_piece.row + 1, game.active_piece.col) {
                             game.active_piece.row += 1
                         }
                     }
